@@ -46,8 +46,7 @@ func main() {
 		if len(trader.Tasks) == 0 {
 			log.Printf("Error: trader '%s' has no tasks", trader.Name)
 		}
+		fmt.Println(trader.Name, len(trader.Tasks))
 	}
-
-	fmt.Println(traders)
 
 }
