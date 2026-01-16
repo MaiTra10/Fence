@@ -1,5 +1,6 @@
 DROP TABLE IF EXISTS public.completed_user_tasks;
 DROP TABLE IF EXISTS public.tasks;
+DROP TABLE IF EXISTS public.task_prereqs;
 DROP TABLE IF EXISTS public.traders;
 DROP TABLE IF EXISTS public.discord_users;
 
@@ -14,7 +15,8 @@ CREATE TABLE public.discord_users (
 CREATE TABLE public.traders (
 
     id SERIAL PRIMARY KEY,
-    name VARCHAR(11) UNIQUE NOT NULL
+    name VARCHAR(11) UNIQUE NOT NULL,
+    image_url TEXT NOT NULL
 
 );
 
@@ -23,11 +25,18 @@ CREATE TABLE public.tasks (
     id SERIAL PRIMARY KEY,
     trader_id INT NOT NULL REFERENCES traders(id),
     name VARCHAR(100) NOT NULL,
+    wiki_url TEXT NOT NULL,
     objectives TEXT NOT NULL,
     rewards TEXT NOT NULL,
-    prerequisites TEXT,
     required_for_kappa BOOLEAN NOT NULL
 
+);
+
+CREATE TABLE public.task_prereqs (
+    task_id INT NOT NULL REFERENCES tasks(id),
+    prereq_task_id INT NOT NULL REFERENCES tasks(id),
+    PRIMARY KEY (task_id, prereq_task_id),
+    CHECK (task_id <> prereq_task_id)
 );
 
 CREATE TABLE public.completed_user_tasks (
@@ -55,6 +64,13 @@ USING (true);
 ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "anon_all_permissions"
 ON "public"."tasks"
+AS PERMISSIVE
+TO anon
+USING (true);
+
+ALTER TABLE public.task_prereqs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "anon_all_permissions"
+ON "public"."task_prereqs"
 AS PERMISSIVE
 TO anon
 USING (true);
