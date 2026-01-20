@@ -8,7 +8,45 @@ import (
 	"github.com/gocolly/colly/v2"
 )
 
-func Scrape(url string, cssSelector string, htmlElement *string) {
+func GetTradersAndTasks() []Trader {
+
+	// Define EFT Wiki URL
+	eftWikiTasksUrl := "https://escapefromtarkov.fandom.com/wiki/Quests"
+
+	// Define the CSS selector used to obtain the div with Traders and Tasks information
+	tradersAndTasksCssSelector := "div.wds-tabber.dealer-tabber"
+
+	// Initialize the var to store HTML of the div which contains Traders and Tasks
+	var traderAndTaskHtml string
+
+	// Scrape the EFT Wiki for the surrounding div
+	scrape(eftWikiTasksUrl, tradersAndTasksCssSelector, &traderAndTaskHtml)
+
+	// Create GoQuery document for use in extraction
+	doc, err := CreateDoc(traderAndTaskHtml)
+	if err != nil {
+		log.Fatal("Failed while creating document from html:", err)
+	}
+
+	// Extract traders to their respective structs list
+	traders, err := ExtractTradersFromHTML(doc)
+	if err != nil {
+		log.Fatal("Failed while extracting traders:", err)
+	}
+
+	// Sanity check to ensure traders is a non-empty list
+	if len(traders) < 1 {
+		log.Fatal("'traders' list is empty")
+	}
+
+	// Extract tasks into Trader.Task component of struct
+	ExractTasksFromHTML(doc, &traders)
+
+	return traders
+
+}
+
+func scrape(url string, cssSelector string, htmlElement *string) {
 
 	// Start timer to keep track of time taken to scrape
 	start := time.Now()

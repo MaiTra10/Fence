@@ -69,8 +69,12 @@ func ExractTasksFromHTML(doc *goquery.Document, traders *[]Trader) {
 				rewards = append(rewards, strings.TrimSpace(li.Text()))
 			})
 
-			kappaText := strings.ToLower(row.Text())
-			requiredForKappa := strings.Contains(kappaText, "kappa")
+			var requiredForKappa bool
+			requiredForKappaText := row.Find("td").Eq(4).Find("font").Text()
+			// Trim whitespace just in case
+			requiredForKappaText = strings.TrimSpace(requiredForKappaText)
+			// Set bool
+			requiredForKappa = requiredForKappaText == "Yes"
 
 			tasks = append(tasks, Task{
 				Name:             name,
