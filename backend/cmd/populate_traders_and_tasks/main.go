@@ -10,8 +10,12 @@ func main() {
 
 	traders := internal.GetTradersAndTasks()
 
-	if err := internal.Populate(traders); err != nil {
-		log.Fatal("Something went wrong while populating PSQL:", err)
+	if err := internal.FillTaskRelatedQuests(traders); err != nil {
+		log.Fatal("Something went wrong while filling in task related quests:", err)
 	}
+
+	// if err := internal.Populate(traders); err != nil {
+	// 	log.Fatal("Something went wrong while populating PSQL:", err)
+	// }
 
 }

@@ -12,5 +12,6 @@ type Task struct {
 	Objectives       []string
 	Rewards          []string
 	PrereqTasks      []string
+	OtherChoices     []string
 	RequiredForKappa bool
 }

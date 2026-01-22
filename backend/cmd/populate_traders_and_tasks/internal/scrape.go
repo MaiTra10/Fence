@@ -3,8 +3,10 @@ package internal
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/gocolly/colly/v2"
 )
 
@@ -43,6 +45,29 @@ func GetTradersAndTasks() []Trader {
 	ExractTasksFromHTML(doc, &traders)
 
 	return traders
+
+}
+
+func FillTaskRelatedQuests(traders []Trader) error {
+
+	// Iterate though tasks within traders
+	for traderIndex := range traders {
+		for taskIndex := range traders[traderIndex].Tasks {
+
+			task := &traders[traderIndex].Tasks[taskIndex]
+
+			prereq, otherChoices, err := scrapeTaskRelatedQuests(task.WikiURL)
+			if err != nil {
+				return fmt.Errorf("failed to get prereq or other choices strings: %w", err)
+			}
+
+			fmt.Println(prereq)
+			fmt.Println(otherChoices)
+
+		}
+	}
+
+	return nil
 
 }
 
@@ -85,4 +110,57 @@ func scrape(url string, cssSelector string, htmlElement *string) {
 	fmt.Println("Scrape completed in:", elapsed)
 	fmt.Println("Length of stored HTML:", len(*htmlElement))
 
+}
+
+func scrapeTaskRelatedQuests(url string) (string, string, error) {
+
+	start := time.Now()
+	c := colly.NewCollector(colly.UserAgent("Mozilla/5.0 (compatible; Colly)"))
+
+	var previous string
+	var otherChoices string
+
+	c.OnHTML("table.va-infobox-group", func(e *colly.HTMLElement) {
+
+		// Check if this table is "Related quests"
+		header := e.DOM.Find("th.va-infobox-header").First().Text()
+		if strings.TrimSpace(header) != "Related quests" {
+			return // skip tables that aren't related quests
+		}
+
+		// Now find <td> elements inside this table
+		e.DOM.Find("td").Each(func(_ int, s *goquery.Selection) {
+			text := strings.TrimSpace(s.Text())
+
+			if strings.HasPrefix(text, "Previous:") {
+				var tasks []string
+				s.Find("a").Each(func(_ int, a *goquery.Selection) {
+					tasks = append(tasks, strings.TrimSpace(a.Text()))
+				})
+				previous = strings.Join(tasks, ", ")
+			} else if strings.HasPrefix(text, "Other choices:") {
+				var choices []string
+				s.Find("a").Each(func(_ int, a *goquery.Selection) {
+					choices = append(choices, strings.TrimSpace(a.Text()))
+				})
+				otherChoices = strings.Join(choices, ", ")
+			}
+		})
+	})
+
+	c.OnRequest(func(r *colly.Request) {
+		fmt.Println("Visiting:", r.URL)
+	})
+	c.OnError(func(r *colly.Response, err error) {
+		log.Fatal("Request URL:", r.Request.URL, "failed with response:", r, "\nError:", err)
+	})
+
+	err := c.Visit(url)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to visit task: %w", err)
+	}
+
+	elapsed := time.Since(start)
+	fmt.Println("Scrape completed in:", elapsed)
+	return previous, otherChoices, nil
 }
