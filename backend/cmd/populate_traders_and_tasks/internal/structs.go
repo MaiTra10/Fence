@@ -1,5 +1,7 @@
 package internal
 
+var eftWikiBaseURL = "https://escapefromtarkov.fandom.com"
+
 type Trader struct {
 	Name     string
 	ImageURL string
@@ -11,7 +13,12 @@ type Task struct {
 	WikiURL          string
 	Objectives       []string
 	Rewards          []string
-	PrereqTasks      [][]string
-	OtherChoices     [][]string
+	PrereqTasks      []RelatedTask
+	OtherChoices     []RelatedTask
 	RequiredForKappa bool
+}
+
+type RelatedTask struct {
+	Name    string
+	WikiURL string
 }

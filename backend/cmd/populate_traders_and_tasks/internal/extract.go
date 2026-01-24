@@ -1,8 +1,6 @@
 package internal
 
 import (
-	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -90,51 +88,4 @@ func ExractTasksFromHTML(doc *goquery.Document, traders *[]Trader) {
 		(*traders)[i].Tasks = tasks
 	})
 
-}
-
-func ExtractPrereqTasks(doc *goquery.Document) ([]string, error) {
-	return extractRelatedTasksByLabel(doc, "Previous:")
-}
-
-func ExtractOtherChoices(doc *goquery.Document) ([]string, error) {
-	return extractRelatedTasksByLabel(doc, "Other choices:")
-}
-
-// Helper function for task related quests
-// Source: ChatGPT
-func extractRelatedTasksByLabel(doc *goquery.Document, label string) ([]string, error) {
-	var tasks []string
-
-	// Find the <td> that contains the label text
-	selection := doc.Find("td.va-infobox-content").FilterFunction(
-		func(_ int, s *goquery.Selection) bool {
-			text := s.Text()
-
-			// Replace non-breaking spaces with regular space
-			text = strings.ReplaceAll(text, "\u00a0", " ")
-
-			// Trim surrounding spaces and newlines
-			text = strings.TrimSpace(text)
-
-			// Make sure the label is at the start
-			return strings.HasPrefix(text, label)
-		},
-	)
-
-	fmt.Println("Selection:", selection)
-
-	if selection.Length() == 0 {
-		return nil, errors.New("label not found: " + label)
-	}
-
-	// Extract all anchor text values
-	selection.Find("a").Each(func(_ int, s *goquery.Selection) {
-		task := strings.TrimSpace(s.Text())
-		if task != "" {
-			tasks = append(tasks, task)
-		}
-	})
-
-	// If no <a> tags exist → "-" case → empty slice
-	return tasks, nil
 }

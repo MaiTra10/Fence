@@ -12,7 +12,7 @@ import (
 func GetTradersAndTasks() []Trader {
 
 	// Define EFT Wiki URL
-	eftWikiTasksUrl := "https://escapefromtarkov.fandom.com/wiki/Quests"
+	eftWikiTasksUrl := eftWikiBaseURL + "/wiki/Quests"
 
 	// Define the CSS selector used to obtain the div with Traders and Tasks information
 	tradersAndTasksCssSelector := "div.wds-tabber.dealer-tabber"
@@ -49,28 +49,38 @@ func GetTradersAndTasks() []Trader {
 
 func FillTaskRelatedQuests(traders []Trader) error {
 
+	fmt.Println("---START---")
+	start := time.Now()
+	fmt.Println("Starting scrape on all tasks...")
+
 	// Iterate though tasks within traders
 	for traderIndex := range traders {
 		for taskIndex := range traders[traderIndex].Tasks {
 
 			task := &traders[traderIndex].Tasks[taskIndex]
 
-			prereq, otherChoices, err := scrapeTaskRelatedQuests(task.WikiURL)
+			prereq, otherChoices, err := scrapeTaskRelatedTasks(task.WikiURL)
 			if err != nil {
 				return fmt.Errorf("failed to get prereq or other choices strings: %w", err)
 			}
 
-			fmt.Println(prereq)
-			fmt.Println(otherChoices)
+			task.PrereqTasks = prereq
+			task.OtherChoices = otherChoices
 
 		}
 	}
+
+	elapsed := time.Since(start)
+	fmt.Println("Related tasks scrape completed in:", elapsed)
+	fmt.Println("---END---")
 
 	return nil
 
 }
 
 func scrape(url string, cssSelector string, htmlElement *string) {
+
+	fmt.Println("---START---")
 
 	// Start timer to keep track of time taken to scrape
 	start := time.Now()
@@ -108,16 +118,16 @@ func scrape(url string, cssSelector string, htmlElement *string) {
 	elapsed := time.Since(start)
 	fmt.Println("Scrape completed in:", elapsed)
 	fmt.Println("Length of stored HTML:", len(*htmlElement))
+	fmt.Println("---END---")
 
 }
 
-func scrapeTaskRelatedQuests(url string) ([][]string, [][]string, error) {
+func scrapeTaskRelatedTasks(url string) ([]RelatedTask, []RelatedTask, error) {
 
-	start := time.Now()
 	c := colly.NewCollector(colly.UserAgent("Mozilla/5.0 (compatible; Colly)"))
 
-	var previous [][]string
-	var otherChoices [][]string
+	var previous []RelatedTask
+	var otherChoices []RelatedTask
 
 	c.OnHTML("table.va-infobox-group", func(h *colly.HTMLElement) {
 
@@ -137,15 +147,17 @@ func scrapeTaskRelatedQuests(url string) ([][]string, [][]string, error) {
 
 				title, _ := s.Attr("title")
 				href, _ := s.Attr("href")
-				fmt.Printf("%d: %s > | %s\n", i, title, href)
 
-				relatedQuestData := []string{title, href}
+				relatedTask := RelatedTask{
+					Name:    title,
+					WikiURL: eftWikiBaseURL + href,
+				}
 
 				switch i {
 				case 0:
-					previous = append(previous, relatedQuestData)
+					previous = append(previous, relatedTask)
 				case 2:
-					otherChoices = append(otherChoices, relatedQuestData)
+					otherChoices = append(otherChoices, relatedTask)
 				}
 
 			})
@@ -154,20 +166,15 @@ func scrapeTaskRelatedQuests(url string) ([][]string, [][]string, error) {
 
 	})
 
-	c.OnRequest(func(r *colly.Request) {
-		fmt.Println("Visiting:", r.URL)
-	})
 	c.OnError(func(r *colly.Response, err error) {
 		log.Fatal("Request URL:", r.Request.URL, "failed with response:", r, "\nError:", err)
 	})
 
 	err := c.Visit(url)
 	if err != nil {
-		return [][]string{}, [][]string{}, fmt.Errorf("failed to visit task: %w", err)
+		return []RelatedTask{}, []RelatedTask{}, fmt.Errorf("failed to visit task: %w", err)
 	}
 
-	elapsed := time.Since(start)
-	fmt.Println("Scrape completed in:", elapsed)
-
 	return previous, otherChoices, nil
+
 }
