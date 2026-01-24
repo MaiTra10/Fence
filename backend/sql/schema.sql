@@ -1,6 +1,7 @@
 DROP TABLE IF EXISTS public.completed_user_tasks;
-DROP TABLE IF EXISTS public.tasks;
 DROP TABLE IF EXISTS public.task_prereqs;
+DROP TABLE IF EXISTS public.task_other_choices;
+DROP TABLE IF EXISTS public.tasks;
 DROP TABLE IF EXISTS public.traders;
 DROP TABLE IF EXISTS public.discord_users;
 
@@ -28,7 +29,8 @@ CREATE TABLE public.tasks (
     wiki_url TEXT NOT NULL,
     objectives TEXT NOT NULL,
     rewards TEXT NOT NULL,
-    required_for_kappa BOOLEAN NOT NULL
+    required_for_kappa BOOLEAN NOT NULL,
+    UNIQUE (trader_id, name)
 
 );
 
@@ -37,6 +39,13 @@ CREATE TABLE public.task_prereqs (
     prereq_task_id INT NOT NULL REFERENCES tasks(id),
     PRIMARY KEY (task_id, prereq_task_id),
     CHECK (task_id <> prereq_task_id)
+);
+
+CREATE TABLE public.task_other_choices (
+    task_id INT NOT NULL REFERENCES tasks(id),
+    other_choice_task_id INT NOT NULL REFERENCES tasks(id),
+    PRIMARY KEY (task_id, other_choice_task_id),
+    CHECK (task_id <> other_choice_task_id)
 );
 
 CREATE TABLE public.completed_user_tasks (
@@ -71,6 +80,13 @@ USING (true);
 ALTER TABLE public.task_prereqs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "anon_all_permissions"
 ON "public"."task_prereqs"
+AS PERMISSIVE
+TO anon
+USING (true);
+
+ALTER TABLE public.task_other_choices ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "anon_all_permissions"
+ON "public"."task_other_choices"
 AS PERMISSIVE
 TO anon
 USING (true);
