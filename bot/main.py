@@ -59,7 +59,7 @@ async def tasks_show_all(interaction: discord.Interaction):
 # Tasks/Show/Trader - Function Definition
 # =================================================================================================================================================
 async def tasks_show_trader(interaction: discord.Interaction, trader: app_commands.Choice[str]):
-    await interaction.response.send_message(f"Showing all tasks given by a {trader}...")
+    await interaction.response.send_message(f"Showing all tasks given by {trader.name}...")
 
 # =================================================================================================================================================
 # Run Bot
