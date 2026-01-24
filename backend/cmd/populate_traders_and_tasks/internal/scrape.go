@@ -3,7 +3,6 @@ package internal
 import (
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -112,40 +111,47 @@ func scrape(url string, cssSelector string, htmlElement *string) {
 
 }
 
-func scrapeTaskRelatedQuests(url string) (string, string, error) {
+func scrapeTaskRelatedQuests(url string) ([][]string, [][]string, error) {
 
 	start := time.Now()
 	c := colly.NewCollector(colly.UserAgent("Mozilla/5.0 (compatible; Colly)"))
 
-	var previous string
-	var otherChoices string
+	var previous [][]string
+	var otherChoices [][]string
 
-	c.OnHTML("table.va-infobox-group", func(e *colly.HTMLElement) {
+	c.OnHTML("table.va-infobox-group", func(h *colly.HTMLElement) {
 
-		// Check if this table is "Related quests"
-		header := e.DOM.Find("th.va-infobox-header").First().Text()
-		if strings.TrimSpace(header) != "Related quests" {
-			return // skip tables that aren't related quests
+		header := h.DOM.Find("th.va-infobox-header").First().Text()
+
+		if header != "Related quests" {
+			return
 		}
 
-		// Now find <td> elements inside this table
-		e.DOM.Find("td").Each(func(_ int, s *goquery.Selection) {
-			text := strings.TrimSpace(s.Text())
+		h.DOM.Find("td.va-infobox-content").Each(func(i int, s *goquery.Selection) {
 
-			if strings.HasPrefix(text, "Previous:") {
-				var tasks []string
-				s.Find("a").Each(func(_ int, a *goquery.Selection) {
-					tasks = append(tasks, strings.TrimSpace(a.Text()))
-				})
-				previous = strings.Join(tasks, ", ")
-			} else if strings.HasPrefix(text, "Other choices:") {
-				var choices []string
-				s.Find("a").Each(func(_ int, a *goquery.Selection) {
-					choices = append(choices, strings.TrimSpace(a.Text()))
-				})
-				otherChoices = strings.Join(choices, ", ")
+			if i == 1 {
+				return
 			}
+
+			s.Find("a").Each(func(_ int, s *goquery.Selection) {
+
+				title, _ := s.Attr("title")
+				href, _ := s.Attr("href")
+				fmt.Printf("%d: %s > | %s\n", i, title, href)
+
+				relatedQuestData := []string{title, href}
+
+				switch i {
+				case 0:
+					previous = append(previous, relatedQuestData)
+				case 2:
+					otherChoices = append(otherChoices, relatedQuestData)
+				}
+
+			})
+
 		})
+
 	})
 
 	c.OnRequest(func(r *colly.Request) {
@@ -157,10 +163,11 @@ func scrapeTaskRelatedQuests(url string) (string, string, error) {
 
 	err := c.Visit(url)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to visit task: %w", err)
+		return [][]string{}, [][]string{}, fmt.Errorf("failed to visit task: %w", err)
 	}
 
 	elapsed := time.Since(start)
 	fmt.Println("Scrape completed in:", elapsed)
+
 	return previous, otherChoices, nil
 }

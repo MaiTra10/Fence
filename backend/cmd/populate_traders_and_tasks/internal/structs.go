@@ -11,7 +11,7 @@ type Task struct {
 	WikiURL          string
 	Objectives       []string
 	Rewards          []string
-	PrereqTasks      []string
-	OtherChoices     []string
+	PrereqTasks      [][]string
+	OtherChoices     [][]string
 	RequiredForKappa bool
 }
