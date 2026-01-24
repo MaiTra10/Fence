@@ -3,6 +3,7 @@ package internal
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -49,7 +50,7 @@ func GetTradersAndTasks() []Trader {
 
 func FillTaskRelatedQuests(traders []Trader) error {
 
-	fmt.Println("---START---")
+	fmt.Println("\n---START---")
 	start := time.Now()
 	fmt.Println("Starting scrape on all tasks...")
 
@@ -72,7 +73,7 @@ func FillTaskRelatedQuests(traders []Trader) error {
 
 	elapsed := time.Since(start)
 	fmt.Println("Related tasks scrape completed in:", elapsed)
-	fmt.Println("---END---")
+	fmt.Println("----END----")
 
 	return nil
 
@@ -80,7 +81,7 @@ func FillTaskRelatedQuests(traders []Trader) error {
 
 func scrape(url string, cssSelector string, htmlElement *string) {
 
-	fmt.Println("---START---")
+	fmt.Println("\n---START---")
 
 	// Start timer to keep track of time taken to scrape
 	start := time.Now()
@@ -118,7 +119,7 @@ func scrape(url string, cssSelector string, htmlElement *string) {
 	elapsed := time.Since(start)
 	fmt.Println("Scrape completed in:", elapsed)
 	fmt.Println("Length of stored HTML:", len(*htmlElement))
-	fmt.Println("---END---")
+	fmt.Println("----END----")
 
 }
 
@@ -145,11 +146,11 @@ func scrapeTaskRelatedTasks(url string) ([]RelatedTask, []RelatedTask, error) {
 
 			s.Find("a").Each(func(_ int, s *goquery.Selection) {
 
-				title, _ := s.Attr("title")
+				name := strings.TrimSpace(s.Text())
 				href, _ := s.Attr("href")
 
 				relatedTask := RelatedTask{
-					Name:    title,
+					Name:    name,
 					WikiURL: eftWikiBaseURL + href,
 				}
 

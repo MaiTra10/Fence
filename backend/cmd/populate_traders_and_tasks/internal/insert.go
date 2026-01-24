@@ -8,7 +8,12 @@ import (
 	generic "github.com/MaiTra10/Fence/backend/generic/db"
 )
 
+// This function only concerns adding the Traders and Tasks
+// Related tasks are added once this fuction is complete since they
+// rely on the Task IDs to exist
 func Populate(traders []Trader) error {
+
+	fmt.Println("\n---START---")
 
 	// Connect to PostgreSQL
 	ctx := context.Background()
@@ -24,6 +29,8 @@ func Populate(traders []Trader) error {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer transaction.Rollback(ctx) // If any of the queries fail, undo all changes
+
+	// ====== PART 1 - Traders and Tasks ======
 
 	// Define trader insertion query
 	insertTraderQuery := `
@@ -101,9 +108,80 @@ func Populate(traders []Trader) error {
 		fmt.Print("All tasks added to table\n")
 	}
 
-	// Commit only after all inserts succeed
-	if err := transaction.Commit(ctx); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
+	// ====== PART 2 - Related Tasks ======
+
+	rows, err := transaction.Query(ctx, `SELECT id, name FROM public.tasks`)
+	if err != nil {
+		return err
 	}
+	defer rows.Close()
+
+	taskNameAndId := make(map[string]int)
+	for rows.Next() {
+		var id int
+		var name string
+		if err := rows.Scan(&id, &name); err != nil {
+			return err
+		}
+		taskNameAndId[name] = id
+	}
+
+	for _, trader := range traders {
+		for _, task := range trader.Tasks {
+
+			taskID, ok := taskNameAndId[task.Name]
+			if !ok {
+				return fmt.Errorf("task not found: %s", task.Name)
+			}
+
+			for _, prereq := range task.PrereqTasks {
+
+				if prereq.Name == "See requirements" {
+					continue
+				}
+
+				prereqID, ok := taskNameAndId[prereq.Name]
+				if !ok {
+					return fmt.Errorf("prereq task not found: %s", prereq.Name)
+				}
+
+				queryInsertPrereqTask := `
+					INSERT INTO public.task_prereqs (task_id, prereq_task_id)
+					VALUES ($1, $2)
+					ON CONFLICT DO NOTHING
+				`
+
+				if _, err := transaction.Exec(ctx, queryInsertPrereqTask, taskID, prereqID); err != nil {
+					return err
+				}
+			}
+
+			for _, otherChoice := range task.OtherChoices {
+				otherChoiceID, ok := taskNameAndId[otherChoice.Name]
+				if !ok {
+					return fmt.Errorf("other choice task not found: %s", otherChoice.Name)
+				}
+
+				queryInsertOtherChoiceTask := `
+					INSERT INTO public.task_other_choices (task_id, other_choice_task_id)
+					VALUES ($1, $2)
+					ON CONFLICT DO NOTHING
+				`
+
+				if _, err := transaction.Exec(ctx, queryInsertOtherChoiceTask, taskID, otherChoiceID); err != nil {
+					return err
+				}
+			}
+
+		}
+	}
+
+	if err := transaction.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit final transaction: %w", err)
+	}
+
+	fmt.Println("\nAll related tasks added to table")
+	fmt.Println("----END----")
+
 	return nil
 }
