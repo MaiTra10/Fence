@@ -81,7 +81,7 @@ func FillTaskRelatedQuests(traders []Trader) error {
 
 func scrape(url string, cssSelector string, htmlElement *string) {
 
-	fmt.Println("\n---START---")
+	fmt.Println("---START---")
 
 	// Start timer to keep track of time taken to scrape
 	start := time.Now()
