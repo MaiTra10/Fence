@@ -17,12 +17,34 @@ tree = discord.app_commands.CommandTree(bot)
 # Slash Commands
 # =================================================================================================================================================
 
-# Tasks - Annotations
+# Tasks - Top Level Group
 # =================================================================================================================================================
-@tree.command(name = "tasks", description = "Get information regarding tasks required for Kappa.")
-@app_commands.describe(given_by = "Choose to show tasks by individual trader.")
+tasks = app_commands.Group(
+    name="tasks",
+    description="Everything related to tasks."
+)
+
+# Tasks/Show - Sub-command
+# =================================================================================================================================================
+show = app_commands.Group(
+    name="show",
+    description="Show tasks",
+    parent=tasks
+)
+
+# Tasks/Show/All - Annotations
+# =================================================================================================================================================
+@show.command(name = "all", description = "Show all tasks.")
+# Tasks/Show/All - Function Definition
+# =================================================================================================================================================
+async def tasks_show_all(interaction: discord.Interaction):
+    await interaction.response.send_message("Showing all tasks...")
+
+# Tasks/Show/Trader - Annotations
+# =================================================================================================================================================
+@show.command(name = "trader", description = "Show all tasks given by a trader.")
 @app_commands.choices(
-    given_by = [
+    trader = [
         app_commands.Choice(name = "Prapor", value = "prapor"),
         app_commands.Choice(name = "Therapist", value = "therapist"),
         app_commands.Choice(name = "Fence", value = "fence"),
@@ -34,25 +56,17 @@ tree = discord.app_commands.CommandTree(bot)
         app_commands.Choice(name = "BTR Driver", value = "btr_driver"),
     ]
 )
-# Tasks - Function Definition
+# Tasks/Show/Trader - Function Definition
 # =================================================================================================================================================
-async def tasks(interaction: discord.Interaction, given_by: Optional[app_commands.Choice[str]]):
-
-    if given_by != None:
-
-        await interaction.response.send_message(
-            f"Selected trader: {given_by.name}"
-        )
-    
-    else:
-        
-        await interaction.response.send_message(
-            f"All"
-        )
+async def tasks_show_trader(interaction: discord.Interaction, trader: app_commands.Choice[str]):
+    await interaction.response.send_message(f"Showing all tasks given by a {trader}...")
 
 # =================================================================================================================================================
 # Run Bot
 # =================================================================================================================================================
+
+# add our commands to the tree
+tree.add_command(tasks)
 
 # load .env file
 load_dotenv()
@@ -62,7 +76,7 @@ load_dotenv()
 async def on_ready():
     print(f"Logged in as {bot.user} (ID: {bot.user.id})")
     print("Syncing commands...")
-    await tree.sync(guild = discord.Object(id = os.getenv("GUILD_ID")))
+    await tree.sync()
     print("Commands synced in all servers!")
 
     # change bot activity
